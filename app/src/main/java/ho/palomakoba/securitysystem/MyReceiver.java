@@ -8,7 +8,9 @@ public class MyReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        // init the service after a boot completed
-
+        if (intent.getAction().equals("android.intent.action.BOOT_COMPLETED")) {
+            // init the service after a boot completed
+            context.startService(new Intent(context, SensorsService.class));
+        }
     }
 }
