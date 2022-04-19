@@ -1,48 +1,74 @@
 package ho.palomakoba.securitysystem;
 
+import android.Manifest;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
-import android.graphics.SurfaceTexture;
-import android.hardware.Camera;
+import android.content.pm.PackageManager;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
-import android.os.Environment;
+import android.hardware.camera2.CameraAccessException;
+import android.hardware.camera2.CameraCharacteristics;
+import android.hardware.camera2.CameraDevice;
+import android.hardware.camera2.CameraManager;
+import android.hardware.camera2.params.StreamConfigurationMap;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 
-import java.io.File;
-import java.io.FileOutputStream;
 import java.text.DecimalFormat;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 
 public class SensorsService extends Service implements SensorEventListener {
     private final String TAG = "SecuritySystemService";
-    private final int FRONT_CAMERA = 1;
+
+
     private SensorManager mSensorManager = null;
     private Sensor accelerometerSensor;
     private Sensor lightSensor;
     private Sensor motionSensor;
     private int counterTakePhoto = 0;
-    private Camera camera = null;
+    private CameraDevice cameraDevice;
+    private String cameraId;
+    private CameraManager mCameraManager = null;
+
+    CameraDevice.StateCallback stateCallBack = new CameraDevice.StateCallback() {
+        @Override
+        public void onOpened(@NonNull CameraDevice camera) {
+            cameraDevice = camera;
+        }
+
+        @Override
+        public void onDisconnected(@NonNull CameraDevice cameraDevice) {
+            cameraDevice.close();
+        }
+
+        @Override
+        public void onError(@NonNull CameraDevice camera, int i) {
+            camera.close();
+            cameraDevice = null;
+        }
+    };
+
 
     public SensorsService() {
     }
+
 
     @Override
     public void onCreate() {
         super.onCreate();
         Log.i(TAG, "Service created");
+        openCamera();
         registerSensors();
     }
 
@@ -54,6 +80,7 @@ public class SensorsService extends Service implements SensorEventListener {
 
     private void registerSensors() {
         mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
+
 
         accelerometerSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         mSensorManager.registerListener(this, accelerometerSensor, 3000000, 3000000);
@@ -97,7 +124,7 @@ public class SensorsService extends Service implements SensorEventListener {
                         handler.postDelayed(new Runnable() {
                             @Override
                             public void run() {
-                                takePhoto();
+                                //takePhoto();
                             }
                         }, 5000);
                     }
@@ -151,70 +178,31 @@ public class SensorsService extends Service implements SensorEventListener {
         return notificationBuilder.build();
     }
 
-    private void takePhoto() {
-
-        if (!safeCameraOpen()) {
-            Log.e(TAG, "Could not get camera instance");
-        } else {
-
-            camera.takePicture(null, null, new Camera.PictureCallback() {
-
-                @Override
-                public void onPictureTaken(byte[] data, Camera camera) {
-                    File imageFileDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
-                    if (!imageFileDir.exists() && !imageFileDir.mkdirs()) {
-                        return;
-                    }
-                    String timeStamp =
-                            new SimpleDateFormat("yyyyMMdd_HHmmss")
-                                    .format(new Date());
-
-                    String imageFileName = "ss_" + timeStamp + ".jpg";
-                    String imageFullPath = imageFileDir.getPath() + File.separator + imageFileName;
-                    File image = new File(imageFullPath);
-
-                    try {
-                        FileOutputStream fos = new FileOutputStream(image);
-                        fos.write(data);
-                        fos.close();
-                        Log.i(TAG, "image saved");
-                    } catch (Exception error) {
-                        Log.e(TAG, "Image could not be saved");
-                    }
-
-                    if (camera != null)
-                        camera.release();
-                }
-            });
-        }
-
-
-        counterTakePhoto++;
-
-
-    }
-
-    private boolean safeCameraOpen() {
-        boolean qOpened = false;
+    // https://github.com/hzitoun/android-camera2-secret-picture-taker
+    private void openCamera() {
+        mCameraManager =
+                (CameraManager) getSystemService(CAMERA_SERVICE);
 
         try {
-            releaseCameraAndPreview();
-            camera = Camera.open(FRONT_CAMERA);
-            camera.setPreviewTexture(new SurfaceTexture(0));
-            camera.startPreview();
-            qOpened = (camera != null);
-        } catch (Exception e) {
-            Log.e(TAG, "failed to open camera");
-            e.printStackTrace();
-        }
+            cameraId = mCameraManager.getCameraIdList()[1];
+            CameraCharacteristics characteristics =
+                    mCameraManager.getCameraCharacteristics(cameraId);
+            StreamConfigurationMap map =
+                    characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+            assert map != null;
 
-        return qOpened;
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
+                    == PackageManager.PERMISSION_GRANTED
+                    && ActivityCompat.checkSelfPermission(this,
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                    == PackageManager.PERMISSION_GRANTED) {
+                mCameraManager.openCamera(cameraId, stateCallBack, null);
+            }
+
+        } catch (CameraAccessException e) {
+            Log.e(TAG, "Error while opening camera " + cameraId, e);
+        }
     }
 
-    private void releaseCameraAndPreview() {
-        if (camera != null) {
-            camera.release();
-            camera = null;
-        }
-    }
+
 }
