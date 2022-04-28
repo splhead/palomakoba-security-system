@@ -1,29 +1,18 @@
 package ho.palomakoba.securitysystem;
 
-import android.Manifest;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
-import android.hardware.camera2.CameraAccessException;
-import android.hardware.camera2.CameraCharacteristics;
-import android.hardware.camera2.CameraDevice;
-import android.hardware.camera2.CameraManager;
-import android.hardware.camera2.params.StreamConfigurationMap;
-import android.os.Handler;
 import android.os.IBinder;
-import android.os.Looper;
 import android.util.Log;
 
-import androidx.annotation.NonNull;
-import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 
 import java.text.DecimalFormat;
@@ -31,44 +20,21 @@ import java.text.DecimalFormat;
 public class SensorsService extends Service implements SensorEventListener {
     private final String TAG = "SecuritySystemService";
 
-
     private SensorManager mSensorManager = null;
     private Sensor accelerometerSensor;
     private Sensor lightSensor;
     private Sensor motionSensor;
     private int counterTakePhoto = 0;
-    private CameraDevice cameraDevice;
-    private String cameraId;
-    private CameraManager mCameraManager = null;
-
-    CameraDevice.StateCallback stateCallBack = new CameraDevice.StateCallback() {
-        @Override
-        public void onOpened(@NonNull CameraDevice camera) {
-            cameraDevice = camera;
-        }
-
-        @Override
-        public void onDisconnected(@NonNull CameraDevice cameraDevice) {
-            cameraDevice.close();
-        }
-
-        @Override
-        public void onError(@NonNull CameraDevice camera, int i) {
-            camera.close();
-            cameraDevice = null;
-        }
-    };
-
 
     public SensorsService() {
     }
-
 
     @Override
     public void onCreate() {
         super.onCreate();
         Log.i(TAG, "Service created");
-        openCamera();
+
+        //openCamera();
         registerSensors();
     }
 
@@ -120,32 +86,36 @@ public class SensorsService extends Service implements SensorEventListener {
                 if (event.values[1] > 4) {
                     Log.i(TAG, valuesToString(event.values));
                     if (counterTakePhoto <= 0) {
-                        final Handler handler = new Handler(Looper.getMainLooper());
-                        handler.postDelayed(new Runnable() {
-                            @Override
-                            public void run() {
-                                //takePhoto();
-                            }
-                        }, 5000);
+                        Intent takePictureIntent
+                                = new Intent(getApplicationContext(), CameraActivity.class);
+                        takePictureIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                        startActivity(takePictureIntent);
+                        Log.i(TAG, "started camera activity");
+                        counterTakePhoto++;
                     }
                 }
                 break;
-            case Sensor.TYPE_LIGHT:
+            /*case Sensor.TYPE_LIGHT:
                 if (event.values[0] < 10) {
                     Log.i(TAG, "Light: " + event.values[0]);
                 }
                 break;
             case Sensor.TYPE_MOTION_DETECT:
                 Log.i(TAG, "Motion: " + event.values[0]);
-                break;
+                break;*/
         }
 
     }
 
     private String valuesToString(float[] values) {
         DecimalFormat df = new DecimalFormat("#");
-        return "X: " + df.format(values[0])
-                + " Y: " + df.format(values[1]) + " Z: " + df.format(values[2]);
+
+        String out = "X: " + df.format(values[0]) +
+                " Y: " +
+                df.format(values[1]) +
+                " Z: " +
+                df.format(values[2]);
+        return out;
     }
 
     @Override
@@ -177,32 +147,5 @@ public class SensorsService extends Service implements SensorEventListener {
 
         return notificationBuilder.build();
     }
-
     // https://github.com/hzitoun/android-camera2-secret-picture-taker
-    private void openCamera() {
-        mCameraManager =
-                (CameraManager) getSystemService(CAMERA_SERVICE);
-
-        try {
-            cameraId = mCameraManager.getCameraIdList()[1];
-            CameraCharacteristics characteristics =
-                    mCameraManager.getCameraCharacteristics(cameraId);
-            StreamConfigurationMap map =
-                    characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
-            assert map != null;
-
-            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
-                    == PackageManager.PERMISSION_GRANTED
-                    && ActivityCompat.checkSelfPermission(this,
-                    Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                    == PackageManager.PERMISSION_GRANTED) {
-                mCameraManager.openCamera(cameraId, stateCallBack, null);
-            }
-
-        } catch (CameraAccessException e) {
-            Log.e(TAG, "Error while opening camera " + cameraId, e);
-        }
-    }
-
-
 }
