@@ -89,6 +89,7 @@ public class SensorsService extends Service implements SensorEventListener {
                         Intent takePictureIntent
                                 = new Intent(getApplicationContext(), CameraActivity.class);
                         takePictureIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                        //takePictureIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
                         startActivity(takePictureIntent);
                         Log.i(TAG, "started camera activity");
                         counterTakePhoto++;
