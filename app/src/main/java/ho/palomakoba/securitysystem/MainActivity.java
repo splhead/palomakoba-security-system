@@ -50,6 +50,8 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
         Intent intent = new Intent(this, SensorsService.class);
 
         startForegroundService(intent);
+
+        finish();
     }
 
 

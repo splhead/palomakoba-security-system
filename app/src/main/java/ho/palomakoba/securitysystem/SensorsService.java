@@ -16,15 +16,22 @@ import android.util.Log;
 import androidx.core.app.NotificationCompat;
 
 import java.text.DecimalFormat;
+import java.time.Duration;
+import java.time.LocalTime;
+import java.time.temporal.ChronoUnit;
 
 public class SensorsService extends Service implements SensorEventListener {
     private final String TAG = "SecuritySystemService";
+    private final static int SECONDS_TO_CHECK_SENSOR_VALUES = 15;
 
     private SensorManager mSensorManager = null;
     private Sensor accelerometerSensor;
-    private Sensor lightSensor;
-    private Sensor motionSensor;
-    private int counterTakePhoto = 0;
+    /*private Sensor lightSensor;
+    private Sensor motionSensor;*/
+
+    private LocalTime previousAccelerometerSensorEventTime = LocalTime.now().minus(
+            Duration.ofSeconds(SECONDS_TO_CHECK_SENSOR_VALUES)
+    );
 
     public SensorsService() {
     }
@@ -34,7 +41,6 @@ public class SensorsService extends Service implements SensorEventListener {
         super.onCreate();
         Log.i(TAG, "Service created");
 
-        //openCamera();
         registerSensors();
     }
 
@@ -51,18 +57,18 @@ public class SensorsService extends Service implements SensorEventListener {
         accelerometerSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         mSensorManager.registerListener(this, accelerometerSensor, 3000000, 3000000);
 
-        lightSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_LIGHT);
+        /*lightSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_LIGHT);
         mSensorManager.registerListener(this, lightSensor, 3000000, 3000000);
 
         motionSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_MOTION_DETECT);
-        mSensorManager.registerListener(this, motionSensor, 3000000, 3000000);
+        mSensorManager.registerListener(this, motionSensor, 3000000, 3000000);*/
         Log.i(TAG, "Sensors registered");
     }
 
     private void unregisterSensors() {
         mSensorManager.unregisterListener(this, accelerometerSensor);
-        mSensorManager.unregisterListener(this, lightSensor);
-        mSensorManager.unregisterListener(this, motionSensor);
+        /*mSensorManager.unregisterListener(this, lightSensor);
+        mSensorManager.unregisterListener(this, motionSensor);*/
         Log.i(TAG, "Sensors unregistered");
     }
 
@@ -79,24 +85,26 @@ public class SensorsService extends Service implements SensorEventListener {
 
     @Override
     public void onSensorChanged(SensorEvent event) {
+        LocalTime currentAccelerometerSensorEventTime = LocalTime.now();
+        long differenceInSeconds = ChronoUnit.SECONDS.between(previousAccelerometerSensorEventTime,
+                currentAccelerometerSensorEventTime);
+
         int type = event.sensor.getType();
 
-        switch (type) {
-            case Sensor.TYPE_ACCELEROMETER:
-                if (event.values[1] > 4) {
-                    Log.i(TAG, valuesToString(event.values));
-                    if (counterTakePhoto <= 0) {
-                        Intent takePictureIntent
-                                = new Intent(getApplicationContext(), CameraActivity.class);
-                        takePictureIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                        //takePictureIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                        startActivity(takePictureIntent);
-                        Log.i(TAG, "started camera activity");
-                        counterTakePhoto++;
-                    }
-                }
-                break;
-            /*case Sensor.TYPE_LIGHT:
+        if (type == Sensor.TYPE_ACCELEROMETER) {
+            if (event.values[1] > 4 && differenceInSeconds >= SECONDS_TO_CHECK_SENSOR_VALUES) {
+                Log.i(TAG, valuesToString(event.values));
+                previousAccelerometerSensorEventTime = currentAccelerometerSensorEventTime;
+
+                    Intent takePictureIntent
+                            = new Intent(getApplicationContext(), CameraActivity.class);
+                    takePictureIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    //takePictureIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                    startActivity(takePictureIntent);
+                    Log.i(TAG, "started camera activity");
+
+            }
+                /*case Sensor.TYPE_LIGHT:
                 if (event.values[0] < 10) {
                     Log.i(TAG, "Light: " + event.values[0]);
                 }
@@ -111,12 +119,11 @@ public class SensorsService extends Service implements SensorEventListener {
     private String valuesToString(float[] values) {
         DecimalFormat df = new DecimalFormat("#");
 
-        String out = "X: " + df.format(values[0]) +
+        return "X: " + df.format(values[0]) +
                 " Y: " +
                 df.format(values[1]) +
                 " Z: " +
                 df.format(values[2]);
-        return out;
     }
 
     @Override

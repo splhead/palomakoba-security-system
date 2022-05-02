@@ -151,7 +151,7 @@ public class CameraActivity extends Activity {
                 public void run() {
                     lockFocus();
                 }
-            }, 100);
+            }, 200);
         }
 
         @Override
