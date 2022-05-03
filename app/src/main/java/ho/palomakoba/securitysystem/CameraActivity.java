@@ -239,16 +239,25 @@ public class CameraActivity extends Activity {
 
         mTextureView = binding.textureView;
 
+        mTextureView.setAlpha(0.05f);
+
+        handleKeyguard();
+        Log.i(TAG, "onCreate");
+    }
+
+    private void handleKeyguard() {
         setShowWhenLocked(true);
         setTurnScreenOn(true);
         KeyguardManager keyguardManager = (KeyguardManager) getSystemService(Context.KEYGUARD_SERVICE);
         if (keyguardManager != null)
             keyguardManager.requestDismissKeyguard(this, null);
+
     }
 
     @Override
     protected void onPause() {
-        //closeCamera();
+
+        closeCamera();
 
         stopBackgroundThread();
 
@@ -333,6 +342,7 @@ public class CameraActivity extends Activity {
         Surface previewSurface = new Surface(surfaceTexture);
 
         try {
+            if (null == mCameraDevice) return;
             mCaptureRequestBuilder = mCameraDevice
                     .createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
             mCaptureRequestBuilder.addTarget(previewSurface);
@@ -392,6 +402,7 @@ public class CameraActivity extends Activity {
 
     private void startStillCaptureRequest() {
         try {
+            if (null == mCameraDevice) return;
             mCaptureRequestBuilder
                     = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
             mCaptureRequestBuilder.addTarget(mImageReader.getSurface());
@@ -414,6 +425,7 @@ public class CameraActivity extends Activity {
                         public void onCaptureCompleted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull TotalCaptureResult result) {
                             super.onCaptureCompleted(session, request, result);
                             Log.i(TAG, "Picture captured");
+
                         }
 
                     };
@@ -450,6 +462,7 @@ public class CameraActivity extends Activity {
         mCaptureRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER,
                 CaptureRequest.CONTROL_AF_TRIGGER_START);
         try {
+            if (null == mCameraCaptureSession) return;
             mCameraCaptureSession.capture(mCaptureRequestBuilder.build(),
                     mCameraCaptureCallback, mBackgroundHandler);
         } catch (CameraAccessException e) {

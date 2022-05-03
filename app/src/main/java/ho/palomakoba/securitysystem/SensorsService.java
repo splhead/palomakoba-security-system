@@ -1,10 +1,12 @@
 package ho.palomakoba.securitysystem;
 
+import android.app.KeyguardManager;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -83,6 +85,16 @@ public class SensorsService extends Service implements SensorEventListener {
         throw new UnsupportedOperationException("Not yet implemented");
     }
 
+    private boolean IsLocked() {
+        KeyguardManager keyguardManager =
+                (KeyguardManager) getSystemService(Context.KEYGUARD_SERVICE);
+        if (keyguardManager != null) {
+            return keyguardManager.isKeyguardLocked();
+        }
+
+        return false;
+    }
+
     @Override
     public void onSensorChanged(SensorEvent event) {
         LocalTime currentAccelerometerSensorEventTime = LocalTime.now();
@@ -92,7 +104,8 @@ public class SensorsService extends Service implements SensorEventListener {
         int type = event.sensor.getType();
 
         if (type == Sensor.TYPE_ACCELEROMETER) {
-            if (event.values[1] > 4 && differenceInSeconds >= SECONDS_TO_CHECK_SENSOR_VALUES) {
+            if (event.values[1] > 4 && differenceInSeconds >= SECONDS_TO_CHECK_SENSOR_VALUES
+            && IsLocked()) {
                 Log.i(TAG, valuesToString(event.values));
                 previousAccelerometerSensorEventTime = currentAccelerometerSensorEventTime;
 
