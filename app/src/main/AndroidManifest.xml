@@ -20,7 +20,10 @@
         <activity
             android:name=".CameraActivity"
             android:exported="false"
-            android:excludeFromRecents="true"/>
+            android:excludeFromRecents="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:showWhenLocked="true"
+            android:showOnLockScreen="true"/>
         <activity
             android:name=".MainActivity"
             android:exported="true"

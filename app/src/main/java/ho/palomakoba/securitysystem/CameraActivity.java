@@ -2,6 +2,7 @@ package ho.palomakoba.securitysystem;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.KeyguardManager;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.graphics.ImageFormat;
@@ -27,7 +28,6 @@ import android.util.SparseIntArray;
 import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
@@ -47,7 +47,7 @@ import java.util.List;
 import ho.palomakoba.securitysystem.databinding.ActivityCameraBinding;
 
 public class CameraActivity extends Activity {
-    private static final String TAG = "CameraActivity";
+    private static final String TAG = "SecuritySystem";
     private static final int REQUEST_CAMERA_PERMISSION_RESULT = 0;
     private static final int REQUEST_WRITE_EXTERNAL_STORAGE_PERMISSION_RESULT = 1;
     private static final int STATE_PREVIEW = 0;
@@ -79,7 +79,6 @@ public class CameraActivity extends Activity {
         @Override
         public void onImageAvailable(ImageReader imageReader) {
             mBackgroundHandler.post(new ImageSaver(imageReader.acquireLatestImage()));
-            finish();
         }
     };
     private int mTotalRotation;
@@ -121,9 +120,8 @@ public class CameraActivity extends Activity {
                             mCaptureState = STATE_PREVIEW;
                             /*Integer afState = captureResult.get(CaptureResult.CONTROL_AF_STATE);
                             if (afState == CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED
-                                    || afState == CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED) {
-                                Toast.makeText(getApplicationContext(), "AF locked",
-                                        Toast.LENGTH_SHORT).show();*/
+                                    || afState == CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED) {*/
+
                             startStillCaptureRequest();
 
                             //}
@@ -193,6 +191,7 @@ public class CameraActivity extends Activity {
     private Handler mBackgroundHandler;
 
     private void startBackgroundThread() {
+        Log.i(TAG, "start bg thread");
         mBackgroundHandlerThread = new HandlerThread("SecuritySystem");
         mBackgroundHandlerThread.start();
         mBackgroundHandler = new Handler(mBackgroundHandlerThread.getLooper());
@@ -204,6 +203,7 @@ public class CameraActivity extends Activity {
             mBackgroundHandlerThread.join();
             mBackgroundHandlerThread = null;
             mBackgroundHandler = null;
+            Log.i(TAG, "stop bg thread");
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -238,11 +238,17 @@ public class CameraActivity extends Activity {
         createImageFolder();
 
         mTextureView = binding.textureView;
+
+        setShowWhenLocked(true);
+        setTurnScreenOn(true);
+        KeyguardManager keyguardManager = (KeyguardManager) getSystemService(Context.KEYGUARD_SERVICE);
+        if (keyguardManager != null)
+            keyguardManager.requestDismissKeyguard(this, null);
     }
 
     @Override
     protected void onPause() {
-        closeCamera();
+        //closeCamera();
 
         stopBackgroundThread();
 
@@ -254,18 +260,15 @@ public class CameraActivity extends Activity {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == REQUEST_CAMERA_PERMISSION_RESULT) {
             if (grantResults[0] != PackageManager.PERMISSION_GRANTED) {
-                Toast.makeText(this, "Application will not run without camera services"
-                        , Toast.LENGTH_SHORT).show();
+                Log.e(TAG, "Application will not run without camera services");
             }
         }
         if (requestCode == REQUEST_WRITE_EXTERNAL_STORAGE_PERMISSION_RESULT) {
             if (grantResults[0] != PackageManager.PERMISSION_GRANTED) {
-                Toast.makeText(this, "Permission successfully granted!"
-                        , Toast.LENGTH_SHORT).show();
+                Log.i(TAG, "Permission successfully granted!");
                 lockFocus();
             } else {
-                Toast.makeText(this, "App needs to save video to run"
-                        , Toast.LENGTH_SHORT).show();
+                Log.i(TAG, "App needs to save video to run");
             }
         }
     }
@@ -352,9 +355,7 @@ public class CameraActivity extends Activity {
 
                         @Override
                         public void onConfigureFailed(@NonNull CameraCaptureSession cameraCaptureSession) {
-                            Toast.makeText(CameraActivity.this,
-                                    "Unable to setup camera preview",
-                                    Toast.LENGTH_SHORT).show();
+                            Log.e(TAG, "unable to use camera");
                         }
                     }, null);
         } catch (CameraAccessException e) {
@@ -371,9 +372,7 @@ public class CameraActivity extends Activity {
                         mCameraDeviceStateCallback, mBackgroundHandler);
             } else {
                 if (shouldShowRequestPermissionRationale(Manifest.permission.CAMERA)) {
-                    Toast.makeText(this,
-                            "Precisa de acesso a camera para funcionar",
-                            Toast.LENGTH_SHORT).show();
+                    Log.i(TAG, "Precisa de acesso a camera para funcionar");
                 }
                 requestPermissions(new String[]{Manifest.permission.CAMERA},
                         REQUEST_CAMERA_PERMISSION_RESULT);
@@ -388,6 +387,7 @@ public class CameraActivity extends Activity {
             mCameraDevice.close();
             mCameraDevice = null;
         }
+        Log.i(TAG, "Camera closed");
     }
 
     private void startStillCaptureRequest() {
@@ -404,14 +404,22 @@ public class CameraActivity extends Activity {
 
                             try {
                                 createImageFileName();
+                                Log.i(TAG, "File created");
                             } catch (IOException e) {
                                 e.printStackTrace();
                             }
                         }
+
+                        @Override
+                        public void onCaptureCompleted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull TotalCaptureResult result) {
+                            super.onCaptureCompleted(session, request, result);
+                            Log.i(TAG, "Picture captured");
+                        }
+
                     };
             mCameraCaptureSession.capture(mCaptureRequestBuilder.build(),
                     stillCaptureCallback, null);
-            Toast.makeText(this, "Picture captured", Toast.LENGTH_SHORT).show();
+
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
@@ -455,8 +463,7 @@ public class CameraActivity extends Activity {
             return true;
         } else {
             if (shouldShowRequestPermissionRationale(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
-                Toast.makeText(this, "necessário para salvar as fotos",
-                        Toast.LENGTH_SHORT).show();
+                Log.i(TAG, "necessário para salvar as fotos");
             }
             requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
                     REQUEST_WRITE_EXTERNAL_STORAGE_PERMISSION_RESULT);

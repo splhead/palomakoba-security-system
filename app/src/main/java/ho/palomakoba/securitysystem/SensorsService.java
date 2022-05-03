@@ -21,7 +21,7 @@ import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
 
 public class SensorsService extends Service implements SensorEventListener {
-    private final String TAG = "SecuritySystemService";
+    private final String TAG = "SecuritySystem";
     private final static int SECONDS_TO_CHECK_SENSOR_VALUES = 15;
 
     private SensorManager mSensorManager = null;
