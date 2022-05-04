@@ -24,7 +24,7 @@ import java.time.temporal.ChronoUnit;
 
 public class SensorsService extends Service implements SensorEventListener {
     private final String TAG = "SecuritySystem";
-    private final static int SECONDS_TO_CHECK_SENSOR_VALUES = 5;
+    private final static int SECONDS_TO_CHECK_SENSOR_VALUES = 10;
 
     private SensorManager mSensorManager = null;
     private Sensor accelerometerSensor;
@@ -156,7 +156,8 @@ public class SensorsService extends Service implements SensorEventListener {
 
         Intent intent = new Intent(SensorsService.this, SensorsService.class);
         PendingIntent pendingIntent = PendingIntent
-                .getActivity(SensorsService.this, 0, intent, 0);
+                .getActivity(SensorsService.this, 0, intent,
+                        PendingIntent.FLAG_IMMUTABLE);
 
         NotificationCompat.Builder notificationBuilder =
                 new NotificationCompat.Builder(this, notificationChannel.getId())
