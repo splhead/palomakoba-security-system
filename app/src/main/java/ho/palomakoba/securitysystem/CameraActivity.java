@@ -149,7 +149,7 @@ public class CameraActivity extends Activity {
                 public void run() {
                     lockFocus();
                 }
-            }, 200);
+            }, 800);
         }
 
         @Override
@@ -425,7 +425,12 @@ public class CameraActivity extends Activity {
                         public void onCaptureCompleted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull TotalCaptureResult result) {
                             super.onCaptureCompleted(session, request, result);
                             Log.i(TAG, "Picture captured");
-
+                            new Handler().postDelayed(new Runnable() {
+                                @Override
+                                public void run() {
+                                    finish();
+                                }
+                            }, 800);
                         }
 
                     };
