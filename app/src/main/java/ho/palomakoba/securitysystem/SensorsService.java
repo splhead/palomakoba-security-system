@@ -157,7 +157,7 @@ public class SensorsService extends Service implements SensorEventListener {
         Intent intent = new Intent(SensorsService.this, SensorsService.class);
         PendingIntent pendingIntent = PendingIntent
                 .getActivity(SensorsService.this, 0, intent,
-                        PendingIntent.FLAG_IMMUTABLE);
+                        PendingIntent.FLAG_CANCEL_CURRENT);
 
         NotificationCompat.Builder notificationBuilder =
                 new NotificationCompat.Builder(this, notificationChannel.getId())

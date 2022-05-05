@@ -40,6 +40,8 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 
 public class CameraActivity extends Activity {
     private static final String TAG = "SecuritySystem";
@@ -48,7 +50,6 @@ public class CameraActivity extends Activity {
 
     private static final SparseIntArray ORIENTATIONS = new SparseIntArray();
     private CameraDevice mCameraDevice;
-    private boolean isCameraInUse = false;
 
     static {
         ORIENTATIONS.append(Surface.ROTATION_0, 0);
@@ -58,6 +59,7 @@ public class CameraActivity extends Activity {
     }
 
     private String mCameraId;
+    private final Semaphore mCameraOpenCloseLock = new Semaphore(1);
 
     private String mImageFileName;
     private File mImageFolder;
@@ -78,24 +80,24 @@ public class CameraActivity extends Activity {
         @Override
         public void onOpened(@NonNull CameraDevice cameraDevice) {
             mCameraDevice = cameraDevice;
-            isCameraInUse = true;
             Log.i(TAG, "Camera opened");
+            mCameraOpenCloseLock.release();
             createCameraCaptureSession();
 
         }
 
         @Override
         public void onDisconnected(@NonNull CameraDevice cameraDevice) {
+            mCameraOpenCloseLock.release();
             cameraDevice.close();
             mCameraDevice = null;
-            isCameraInUse = false;
         }
 
         @Override
         public void onError(@NonNull CameraDevice cameraDevice, int i) {
+            mCameraOpenCloseLock.release();
             cameraDevice.close();
             mCameraDevice = null;
-            isCameraInUse = false;
         }
     };
 
@@ -197,11 +199,14 @@ public class CameraActivity extends Activity {
 
         createImageFolder();
 
+        // must be before setupCamera();
+        handleKeyguard();
+
         setupCamera();
 
         Log.i(TAG, "onCreate");
 
-        handleKeyguard();
+
     }
 
     private void handleKeyguard() {
@@ -284,18 +289,22 @@ public class CameraActivity extends Activity {
                 String cameraId = "1";
                 CameraCharacteristics cameraCharacteristics
                         = cameraManager.getCameraCharacteristics(cameraId);
-                /*if (cameraCharacteristics.get(CameraCharacteristics.LENS_FACING)
-                        == CameraCharacteristics.LENS_FACING_BACK) {
-                    continue;
-                }*/
+
                 StreamConfigurationMap map =
                         cameraCharacteristics
                                 .get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
 
                 Size mImageSize = chooseOptimalSize(map.getOutputSizes(ImageFormat.JPEG),
                         1080, 768);
-                mImageReader = ImageReader.newInstance(mImageSize.getWidth(),
-                        mImageSize.getHeight(), ImageFormat.JPEG, 1);
+
+                //int orientation = getResources().getConfiguration().orientation;
+
+                int width = mImageSize.getWidth();
+                int height = mImageSize.getHeight();
+
+                mImageReader = ImageReader.newInstance(width,
+                        height, ImageFormat.JPEG, 1);
+
                 mImageReader.setOnImageAvailableListener(mOnImageAvailableListener,
                         mBackgroundHandler);
                 mCameraId = cameraId;
@@ -311,7 +320,8 @@ public class CameraActivity extends Activity {
         try {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
                     == PackageManager.PERMISSION_GRANTED) {
-                if(isCameraInUse) return;
+                if (!mCameraOpenCloseLock.tryAcquire(2500, TimeUnit.MILLISECONDS))
+                    throw  new RuntimeException("Timeout waitin to lock camera opening.");
                 cameraManager.openCamera(mCameraId,
                         mCameraDeviceStateCallback, mBackgroundHandler);
             } else {
@@ -324,6 +334,8 @@ public class CameraActivity extends Activity {
         } catch (CameraAccessException e) {
             Log.e(TAG, "Erro ao abrir a camera");
             e.printStackTrace();
+        } catch (InterruptedException e) {
+            Log.e(TAG, "Interrupted while trying to lock camera opening.");
         }
     }
 
@@ -332,8 +344,22 @@ public class CameraActivity extends Activity {
             mCameraDevice.close();
             mCameraDevice = null;
         }
+        if (null != mCameraCaptureSession) {
+            mCameraCaptureSession.close();
+            mCameraCaptureSession = null;
+        }
+        if (null != mImageReader) {
+            mImageReader.close();
+            mImageReader = null;
+        }
+        try {
+            mCameraOpenCloseLock.acquire();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
+            mCameraOpenCloseLock.release();
+        }
         Log.i(TAG, "Camera closed");
-        isCameraInUse = false;
         new Handler().postDelayed(this::finish, 1500);
     }
 
