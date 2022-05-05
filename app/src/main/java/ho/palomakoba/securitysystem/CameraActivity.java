@@ -48,15 +48,9 @@ public class CameraActivity extends Activity {
     private static final int REQUEST_CAMERA_PERMISSION_RESULT = 0;
     private static final int REQUEST_WRITE_EXTERNAL_STORAGE_PERMISSION_RESULT = 1;
 
-    private static final SparseIntArray ORIENTATIONS = new SparseIntArray();
-    private CameraDevice mCameraDevice;
+    private Integer sensorOrientation;
 
-    static {
-        ORIENTATIONS.append(Surface.ROTATION_0, 0);
-        ORIENTATIONS.append(Surface.ROTATION_90, 90);
-        ORIENTATIONS.append(Surface.ROTATION_180, 180);
-        ORIENTATIONS.append(Surface.ROTATION_270, 270);
-    }
+    private CameraDevice mCameraDevice;
 
     private String mCameraId;
     private final Semaphore mCameraOpenCloseLock = new Semaphore(1);
@@ -133,8 +127,8 @@ public class CameraActivity extends Activity {
             captureRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE,
                     CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
 
-            int rotation = getWindowManager().getDefaultDisplay().getRotation();
-            captureRequestBuilder.set(CaptureRequest.JPEG_ORIENTATION, ORIENTATIONS.get(rotation));
+
+            captureRequestBuilder.set(CaptureRequest.JPEG_ORIENTATION, sensorOrientation);
 
             mCameraCaptureSession.capture(captureRequestBuilder.build(),
                     new CameraCaptureSession.CaptureCallback() {
@@ -200,6 +194,7 @@ public class CameraActivity extends Activity {
         createImageFolder();
 
         // must be before setupCamera();
+        // to avoid disable camera by policy
         handleKeyguard();
 
         setupCamera();
@@ -261,7 +256,7 @@ public class CameraActivity extends Activity {
     }
 
     private static Size chooseOptimalSize(Size[] choices, int width, int height) {
-        List<Size> bigEnough = new ArrayList<Size>();
+        List<Size> bigEnough = new ArrayList<>();
         for (Size option : choices) {
             if (option.getHeight() == option.getWidth() * height / width &&
                     option.getWidth() >= width && option.getHeight() >= height) {
@@ -289,6 +284,8 @@ public class CameraActivity extends Activity {
                 String cameraId = "1";
                 CameraCharacteristics cameraCharacteristics
                         = cameraManager.getCameraCharacteristics(cameraId);
+
+                sensorOrientation = cameraCharacteristics.get(CameraCharacteristics.SENSOR_ORIENTATION);
 
                 StreamConfigurationMap map =
                         cameraCharacteristics

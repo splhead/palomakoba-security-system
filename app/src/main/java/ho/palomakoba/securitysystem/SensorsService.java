@@ -28,8 +28,6 @@ public class SensorsService extends Service implements SensorEventListener {
 
     private SensorManager mSensorManager = null;
     private Sensor accelerometerSensor;
-    /*private Sensor lightSensor;
-    private Sensor motionSensor;*/
 
     private LocalTime previousAccelerometerSensorEventTime = LocalTime.now().minus(
             Duration.ofSeconds(SECONDS_TO_CHECK_SENSOR_VALUES)
@@ -59,18 +57,12 @@ public class SensorsService extends Service implements SensorEventListener {
         accelerometerSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         mSensorManager.registerListener(this, accelerometerSensor, 3000000, 3000000);
 
-        /*lightSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_LIGHT);
-        mSensorManager.registerListener(this, lightSensor, 3000000, 3000000);
-
-        motionSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_MOTION_DETECT);
-        mSensorManager.registerListener(this, motionSensor, 3000000, 3000000);*/
         Log.i(TAG, "Sensors registered");
     }
 
     private void unregisterSensors() {
         mSensorManager.unregisterListener(this, accelerometerSensor);
-        /*mSensorManager.unregisterListener(this, lightSensor);
-        mSensorManager.unregisterListener(this, motionSensor);*/
+
         Log.i(TAG, "Sensors unregistered");
     }
 
@@ -112,19 +104,11 @@ public class SensorsService extends Service implements SensorEventListener {
                     Intent takePictureIntent
                             = new Intent(getApplicationContext(), CameraActivity.class);
                     takePictureIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    //takePictureIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+
                     startActivity(takePictureIntent);
                     Log.i(TAG, "started camera activity");
 
             }
-                /*case Sensor.TYPE_LIGHT:
-                if (event.values[0] < 10) {
-                    Log.i(TAG, "Light: " + event.values[0]);
-                }
-                break;
-            case Sensor.TYPE_MOTION_DETECT:
-                Log.i(TAG, "Motion: " + event.values[0]);
-                break;*/
         }
 
     }
@@ -157,7 +141,7 @@ public class SensorsService extends Service implements SensorEventListener {
         Intent intent = new Intent(SensorsService.this, SensorsService.class);
         PendingIntent pendingIntent = PendingIntent
                 .getActivity(SensorsService.this, 0, intent,
-                        PendingIntent.FLAG_CANCEL_CURRENT);
+                        PendingIntent.FLAG_IMMUTABLE);
 
         NotificationCompat.Builder notificationBuilder =
                 new NotificationCompat.Builder(this, notificationChannel.getId())
