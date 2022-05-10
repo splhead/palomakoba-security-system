@@ -22,7 +22,6 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.util.Log;
 import android.util.Size;
-import android.util.SparseIntArray;
 import android.view.Surface;
 import android.view.View;
 
@@ -255,11 +254,11 @@ public class CameraActivity extends Activity {
         }
     }
 
-    private static Size chooseOptimalSize(Size[] choices, int width, int height) {
+    private static Size chooseOptimalSize(Size[] choices) {
         List<Size> bigEnough = new ArrayList<>();
         for (Size option : choices) {
-            if (option.getHeight() == option.getWidth() * height / width &&
-                    option.getWidth() >= width && option.getHeight() >= height) {
+            if (option.getHeight() == option.getWidth() * 768 / 1080 &&
+                    option.getWidth() >= 1080 && option.getHeight() >= 768) {
                 bigEnough.add(option);
             }
         }
@@ -291,8 +290,8 @@ public class CameraActivity extends Activity {
                         cameraCharacteristics
                                 .get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
 
-                Size mImageSize = chooseOptimalSize(map.getOutputSizes(ImageFormat.JPEG),
-                        1080, 768);
+                Size mImageSize = chooseOptimalSize(map.getOutputSizes(ImageFormat.JPEG)
+                );
 
                 //int orientation = getResources().getConfiguration().orientation;
 
