@@ -30,6 +30,7 @@ public class SensorsService extends Service implements SensorEventListener {
     private Sensor accelerometerSensor;
     private Sensor lightSensor;
     private boolean hasLight = true;
+    private int movimento;
 
     private LocalTime previousAccelerometerSensorEventTime = LocalTime.now().minus(
             Duration.ofSeconds(SECONDS_TO_CHECK_SENSOR_VALUES)
@@ -104,7 +105,17 @@ public class SensorsService extends Service implements SensorEventListener {
         if (differenceInSeconds >= SECONDS_TO_CHECK_SENSOR_VALUES) {
 
             if (type == Sensor.TYPE_ACCELEROMETER) {
-                if (event.values[1] > 4 && IsLocked() && hasLight) {
+
+                if (event.values[1] < -5 && movimento == 0) {
+                    movimento++;
+
+                } else {
+                    if (event.values[1] > 5 && movimento == 1) {
+                        movimento++;
+                    }
+                }
+
+                if (movimento ==2 && IsLocked() && hasLight) {
                     Log.i(TAG, valuesToString(event.values));
                     previousAccelerometerSensorEventTime = currentAccelerometerSensorEventTime;
 
@@ -114,6 +125,7 @@ public class SensorsService extends Service implements SensorEventListener {
 
                     startActivity(takePictureIntent);
                     Log.i(TAG, "started camera activity");
+                    movimento = 0;
 
                 }
             }
