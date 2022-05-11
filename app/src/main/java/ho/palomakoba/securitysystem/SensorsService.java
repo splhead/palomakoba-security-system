@@ -28,6 +28,8 @@ public class SensorsService extends Service implements SensorEventListener {
 
     private SensorManager mSensorManager = null;
     private Sensor accelerometerSensor;
+    private Sensor lightSensor;
+    private boolean hasLight = true;
 
     private LocalTime previousAccelerometerSensorEventTime = LocalTime.now().minus(
             Duration.ofSeconds(SECONDS_TO_CHECK_SENSOR_VALUES)
@@ -57,11 +59,15 @@ public class SensorsService extends Service implements SensorEventListener {
         accelerometerSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         mSensorManager.registerListener(this, accelerometerSensor, 3000000, 3000000);
 
+        lightSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_LIGHT);
+        mSensorManager.registerListener(this, lightSensor, 3000000, 3000000);
+
         Log.i(TAG, "Sensors registered");
     }
 
     private void unregisterSensors() {
         mSensorManager.unregisterListener(this, accelerometerSensor);
+        mSensorManager.unregisterListener(this, lightSensor);
 
         Log.i(TAG, "Sensors unregistered");
     }
@@ -95,11 +101,12 @@ public class SensorsService extends Service implements SensorEventListener {
 
         int type = event.sensor.getType();
 
-        if (type == Sensor.TYPE_ACCELEROMETER) {
-            if (event.values[1] > 4 && differenceInSeconds >= SECONDS_TO_CHECK_SENSOR_VALUES
-            && IsLocked()) {
-                Log.i(TAG, valuesToString(event.values));
-                previousAccelerometerSensorEventTime = currentAccelerometerSensorEventTime;
+        if (differenceInSeconds >= SECONDS_TO_CHECK_SENSOR_VALUES) {
+
+            if (type == Sensor.TYPE_ACCELEROMETER) {
+                if (event.values[1] > 4 && IsLocked() && hasLight) {
+                    Log.i(TAG, valuesToString(event.values));
+                    previousAccelerometerSensorEventTime = currentAccelerometerSensorEventTime;
 
                     Intent takePictureIntent
                             = new Intent(getApplicationContext(), CameraActivity.class);
@@ -108,6 +115,11 @@ public class SensorsService extends Service implements SensorEventListener {
                     startActivity(takePictureIntent);
                     Log.i(TAG, "started camera activity");
 
+                }
+            }
+
+            if (type == Sensor.TYPE_LIGHT) {
+                hasLight = !(event.values[0] <= 10);
             }
         }
 
