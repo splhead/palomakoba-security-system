@@ -114,7 +114,7 @@ public class SensorsService extends Service implements SensorEventListener {
                         movimento++;
                     }
                 }
-
+    //movimento em Y
                 if (movimento ==2 && IsLocked() && hasLight) {
                     Log.i(TAG, valuesToString(event.values));
                     previousAccelerometerSensorEventTime = currentAccelerometerSensorEventTime;
@@ -126,6 +126,7 @@ public class SensorsService extends Service implements SensorEventListener {
                     startActivity(takePictureIntent);
                     Log.i(TAG, "started camera activity");
                     movimento = 0;
+
 
                 }
             }
