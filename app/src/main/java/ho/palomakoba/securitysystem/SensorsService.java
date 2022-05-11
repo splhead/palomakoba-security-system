@@ -109,9 +109,11 @@ public class SensorsService extends Service implements SensorEventListener {
                 if (event.values[1] < -5 && movimento == 0) {
                     movimento++;
 
+
                 } else {
                     if (event.values[1] > 5 && movimento == 1) {
                         movimento++;
+
                     }
                 }
     //movimento em Y
