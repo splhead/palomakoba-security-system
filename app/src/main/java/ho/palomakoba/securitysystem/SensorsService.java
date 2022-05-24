@@ -27,9 +27,8 @@ public class SensorsService extends Service implements SensorEventListener {
     private final static int SECONDS_TO_CHECK_SENSOR_VALUES = 10;
 
     private SensorManager mSensorManager = null;
-    private Sensor accelerometerSensor;
-    private Sensor lightSensor;
     private boolean hasLight = true;
+    private boolean inPocket = false;
 
     private LocalTime previousAccelerometerSensorEventTime = LocalTime.now().minus(
             Duration.ofSeconds(SECONDS_TO_CHECK_SENSOR_VALUES)
@@ -56,18 +55,20 @@ public class SensorsService extends Service implements SensorEventListener {
         mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
 
 
-        accelerometerSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        Sensor accelerometerSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         mSensorManager.registerListener(this, accelerometerSensor, 3000000, 3000000);
 
-        lightSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_LIGHT);
+        Sensor lightSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_LIGHT);
         mSensorManager.registerListener(this, lightSensor, 3000000, 3000000);
+
+        Sensor proximitySensor = mSensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY);
+        mSensorManager.registerListener(this, proximitySensor, 3000000, 3000000);
 
         Log.i(TAG, "Sensors registered");
     }
 
     private void unregisterSensors() {
-        mSensorManager.unregisterListener(this, accelerometerSensor);
-        mSensorManager.unregisterListener(this, lightSensor);
+        mSensorManager.unregisterListener(this);
 
         Log.i(TAG, "Sensors unregistered");
     }
@@ -104,7 +105,7 @@ public class SensorsService extends Service implements SensorEventListener {
         if (differenceInSeconds >= SECONDS_TO_CHECK_SENSOR_VALUES) {
 
             if (type == Sensor.TYPE_ACCELEROMETER) {
-                if (event.values[1] > 4 && IsLocked() && hasLight) {
+                if (event.values[1] > 4 && IsLocked() && hasLight && !inPocket) {
                     Log.i(TAG, valuesToString(event.values));
                     previousAccelerometerSensorEventTime = currentAccelerometerSensorEventTime;
 
@@ -119,9 +120,15 @@ public class SensorsService extends Service implements SensorEventListener {
             }
 
             if (type == Sensor.TYPE_LIGHT) {
-                hasLight = !(event.values[0] <= 10);
+                hasLight = !(event.values[0] <= 3);
             }
+
+            if (type == Sensor.TYPE_PROXIMITY) {
+                inPocket = event.values[0] == 0;
+            }
+
         }
+
 
     }
 
