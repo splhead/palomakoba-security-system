@@ -118,17 +118,15 @@ public class SensorsService extends Service implements SensorEventListener {
 
                 }
             }
-
-            if (type == Sensor.TYPE_LIGHT) {
-                hasLight = !(event.values[0] <= 3);
-            }
-
-            if (type == Sensor.TYPE_PROXIMITY) {
-                inPocket = event.values[0] == 0;
-            }
-
         }
 
+        if (type == Sensor.TYPE_LIGHT) {
+            hasLight = !(event.values[0] <= 3);
+        }
+
+        if (type == Sensor.TYPE_PROXIMITY) {
+            inPocket = event.values[0] == 0;
+        }
 
     }
 
