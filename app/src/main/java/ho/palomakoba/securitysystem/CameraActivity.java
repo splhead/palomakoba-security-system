@@ -4,6 +4,7 @@ import android.Manifest;
 import android.app.Activity;
 import android.app.KeyguardManager;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.ImageFormat;
 import android.hardware.camera2.CameraAccessException;
@@ -16,6 +17,7 @@ import android.hardware.camera2.TotalCaptureResult;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.Image;
 import android.media.ImageReader;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
@@ -51,21 +53,30 @@ public class CameraActivity extends Activity {
 
     private CameraDevice mCameraDevice;
 
+    private  File imageFile;
+
     private String mCameraId;
     private final Semaphore mCameraOpenCloseLock = new Semaphore(1);
 
     private String mImageFileName;
     private File mImageFolder;
 
-    private final ImageReader.OnImageAvailableListener mOnImageAvailableListener
-            = new ImageReader.OnImageAvailableListener() {
+    private final ImageReader.OnImageAvailableListener mOnImageAvailableListener = new ImageReader.OnImageAvailableListener() {
         @Override
         public void onImageAvailable(ImageReader imageReader) {
             mBackgroundHandler.post(new ImageSaver(imageReader.acquireLatestImage()));
+
+            Intent mediaScanIntent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
+
+            Uri uri = Uri.fromFile(imageFile);
+            mediaScanIntent.setData(uri);
+            sendBroadcast(mediaScanIntent);
+
             closeCamera();
         }
     };
     private ImageReader mImageReader;
+
 
     private CameraCaptureSession mCameraCaptureSession;
 
@@ -280,31 +291,31 @@ public class CameraActivity extends Activity {
         CameraManager cameraManager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
         try {
             //for (String cameraId : cameraManager.getCameraIdList()) {
-                String cameraId = "1";
-                CameraCharacteristics cameraCharacteristics
-                        = cameraManager.getCameraCharacteristics(cameraId);
+            String cameraId = "1";
+            CameraCharacteristics cameraCharacteristics
+                    = cameraManager.getCameraCharacteristics(cameraId);
 
-                sensorOrientation = cameraCharacteristics.get(CameraCharacteristics.SENSOR_ORIENTATION);
+            sensorOrientation = cameraCharacteristics.get(CameraCharacteristics.SENSOR_ORIENTATION);
 
-                StreamConfigurationMap map =
-                        cameraCharacteristics
-                                .get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+            StreamConfigurationMap map =
+                    cameraCharacteristics
+                            .get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
 
-                Size mImageSize = chooseOptimalSize(map.getOutputSizes(ImageFormat.JPEG)
-                );
+            Size mImageSize = chooseOptimalSize(map.getOutputSizes(ImageFormat.JPEG)
+            );
 
-                //int orientation = getResources().getConfiguration().orientation;
+            //int orientation = getResources().getConfiguration().orientation;
 
-                int width = mImageSize.getWidth();
-                int height = mImageSize.getHeight();
+            int width = mImageSize.getWidth();
+            int height = mImageSize.getHeight();
 
-                mImageReader = ImageReader.newInstance(width,
-                        height, ImageFormat.JPEG, 1);
+            mImageReader = ImageReader.newInstance(width,
+                    height, ImageFormat.JPEG, 1);
 
-                mImageReader.setOnImageAvailableListener(mOnImageAvailableListener,
-                        mBackgroundHandler);
-                mCameraId = cameraId;
-                connectCamera();
+            mImageReader.setOnImageAvailableListener(mOnImageAvailableListener,
+                    mBackgroundHandler);
+            mCameraId = cameraId;
+            connectCamera();
             //}
         } catch (CameraAccessException e) {
             e.printStackTrace();
@@ -359,13 +370,13 @@ public class CameraActivity extends Activity {
         new Handler().postDelayed(this::finish, 1500);
     }
 
-    private void createImageFileName() throws IOException {
+    private File createImageFileName() throws IOException {
         String timestamp = new SimpleDateFormat("ddMMyyyy_HHmmss", Locale.US)
                 .format(new Date());
         String prepend = "front_" + timestamp + "_";
-        File imageFile = File.createTempFile(prepend, ".jpg", mImageFolder);
+         imageFile = File.createTempFile(prepend, ".jpg", mImageFolder);
         mImageFileName = imageFile.getAbsolutePath();
-        //return imageFile;
+        return imageFile;
     }
 
     private void createImageFolder() {
